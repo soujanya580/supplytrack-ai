@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Layout from "./components/Layout";
 import RobotGuide from "./components/RobotGuide";
 import AdminApprovalScreen from "./screens/AdminApprovalScreen";
@@ -13,6 +13,8 @@ import MessagesScreen from "./screens/MessagesScreen";
 import PurchaseOrdersScreen from "./screens/PurchaseOrdersScreen";
 import RegisterScreen from "./screens/RegisterScreen";
 import SuppliersScreen from "./screens/SuppliersScreen";
+import { clearSession, getSession } from "./utils/auth";
+import type { StoredUser } from "./utils/auth";
 
 export type Screen =
   | "login"
@@ -30,24 +32,34 @@ export type Screen =
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("login");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
 
-  const handleLogin = () => {
-    setIsLoggedIn(true);
+  // Restore session on mount
+  useEffect(() => {
+    const session = getSession();
+    if (session) {
+      setCurrentUser(session);
+      setScreen("dashboard");
+    }
+  }, []);
+
+  const handleLogin = (user: StoredUser) => {
+    setCurrentUser(user);
     setScreen("dashboard");
   };
 
-  const handleRegister = () => {
-    setIsLoggedIn(true);
+  const handleRegister = (user: StoredUser) => {
+    setCurrentUser(user);
     setScreen("dashboard");
   };
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
+    clearSession();
+    setCurrentUser(null);
     setScreen("login");
   };
 
-  if (!isLoggedIn) {
+  if (!currentUser) {
     if (screen === "register") {
       return (
         <RegisterScreen
@@ -98,6 +110,7 @@ export default function App() {
         currentScreen={screen}
         onNavigate={setScreen}
         onLogout={handleLogout}
+        currentUser={currentUser}
       >
         {renderScreen()}
       </Layout>

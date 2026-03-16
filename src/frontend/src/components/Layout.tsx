@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Screen } from "../App";
+import type { StoredUser } from "../utils/auth";
 import { useNotificationStore } from "../utils/notificationStore";
 
 interface LayoutProps {
@@ -24,6 +25,7 @@ interface LayoutProps {
   currentScreen: Screen;
   onNavigate: (screen: Screen) => void;
   onLogout: () => void;
+  currentUser: StoredUser;
 }
 
 const typeColors: Record<string, string> = {
@@ -51,11 +53,21 @@ const fabItems = [
   { label: "Alert Report", icon: AlertTriangle, color: "#EF4444" },
 ];
 
+function userInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .slice(0, 2)
+    .join("");
+}
+
 export default function Layout({
   children,
   currentScreen,
   onNavigate,
   onLogout,
+  currentUser,
 }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
@@ -64,6 +76,10 @@ export default function Layout({
 
   const { notifications, markAllRead, unreadCount } = useNotificationStore();
   const count = unreadCount();
+
+  const initials = userInitials(currentUser.name);
+  const displayRole =
+    currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
 
   // Close notification panel when clicking outside
   useEffect(() => {
@@ -261,7 +277,7 @@ export default function Layout({
                 flexShrink: 0,
               }}
             >
-              SS
+              {initials}
             </div>
             <div style={{ flex: 1, overflow: "hidden" }}>
               <div
@@ -274,10 +290,10 @@ export default function Layout({
                   textOverflow: "ellipsis",
                 }}
               >
-                Soujanya S
+                {currentUser.name}
               </div>
               <div style={{ fontSize: 11, color: "#00D4AA" }}>
-                Administrator
+                {displayRole}
               </div>
             </div>
           </div>
@@ -456,6 +472,69 @@ export default function Layout({
                   );
                 })}
               </div>
+              {/* Mobile user info */}
+              <div
+                style={{
+                  marginTop: 16,
+                  paddingTop: 16,
+                  borderTop: "1px solid #1E3A5F",
+                  padding: "16px 12px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    marginBottom: 12,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: "50%",
+                      background: "#00D4AA",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 700,
+                      color: "#0A1628",
+                      fontSize: 12,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {initials}
+                  </div>
+                  <div>
+                    <div
+                      style={{ fontSize: 13, fontWeight: 600, color: "white" }}
+                    >
+                      {currentUser.name}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#00D4AA" }}>
+                      {displayRole}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  data-ocid="nav.mobile.logout.button"
+                  onClick={onLogout}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    background: "none",
+                    border: "none",
+                    color: "#718096",
+                    cursor: "pointer",
+                    fontSize: 13,
+                  }}
+                >
+                  <LogOut size={15} /> Sign Out
+                </button>
+              </div>
             </nav>
           </aside>
         </div>
@@ -560,7 +639,6 @@ export default function Layout({
               )}
             </button>
 
-            {/* Notification dropdown panel */}
             {notifOpen && (
               <div
                 data-ocid="topbar.notifications.panel"
@@ -580,7 +658,6 @@ export default function Layout({
                   flexDirection: "column",
                 }}
               >
-                {/* Header */}
                 <div
                   style={{
                     display: "flex",
@@ -612,8 +689,6 @@ export default function Layout({
                     Mark all read
                   </button>
                 </div>
-
-                {/* List */}
                 <div style={{ overflowY: "auto", flex: 1 }}>
                   {notifications.length === 0 ? (
                     <div
@@ -637,9 +712,7 @@ export default function Layout({
                           gap: 0,
                           borderBottom: "1px solid #242424",
                           background: notif.read ? "transparent" : "#252525",
-                          borderLeft: `3px solid ${
-                            typeColors[notif.type] ?? "#718096"
-                          }`,
+                          borderLeft: `3px solid ${typeColors[notif.type] ?? "#718096"}`,
                         }}
                       >
                         <div style={{ flex: 1, padding: "10px 14px" }}>
@@ -707,7 +780,7 @@ export default function Layout({
               fontSize: 13,
             }}
           >
-            SS
+            {initials}
           </button>
         </header>
         <main style={{ flex: 1, overflowY: "auto", padding: 0 }}>

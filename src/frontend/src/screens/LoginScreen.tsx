@@ -1,10 +1,24 @@
-import { Eye, EyeOff, Shield } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Shield } from "lucide-react";
 import { useState } from "react";
+import { findUserByEmail, saveSession, validatePassword } from "../utils/auth";
+import type { StoredUser } from "../utils/auth";
 
 interface Props {
-  onLogin: () => void;
+  onLogin: (user: StoredUser) => void;
   onCreateAccount: () => void;
 }
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "12px 16px",
+  borderRadius: 10,
+  background: "#2A2A2A",
+  border: "1px solid #333",
+  color: "white",
+  fontSize: 14,
+  outline: "none",
+  boxSizing: "border-box",
+};
 
 const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
   e.target.style.borderColor = "#00D4AA";
@@ -17,6 +31,33 @@ export default function LoginScreen({ onLogin, onCreateAccount }: Props) {
   const [showPw, setShowPw] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = () => {
+    setError("");
+    if (!email.trim() || !password) {
+      setError("Please enter your email and password.");
+      return;
+    }
+    setLoading(true);
+    // Small delay to simulate async check
+    setTimeout(() => {
+      const user = findUserByEmail(email.trim());
+      if (!user || !validatePassword(password, user.passwordHash)) {
+        setError("Invalid email or password. Please check your credentials.");
+        setLoading(false);
+        return;
+      }
+      saveSession(user);
+      setLoading(false);
+      onLogin(user);
+    }, 400);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleSubmit();
+  };
 
   return (
     <div
@@ -98,21 +139,13 @@ export default function LoginScreen({ onLogin, onCreateAccount }: Props) {
           </label>
           <input
             id="login-email"
-            data-ocid="login.email.input"
+            data-ocid="login.input"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Enter your email"
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              borderRadius: 10,
-              background: "#2A2A2A",
-              border: "1px solid #333",
-              color: "white",
-              fontSize: 14,
-              outline: "none",
-            }}
+            style={inputStyle}
             onFocus={handleFocus}
             onBlur={handleBlur}
           />
@@ -138,17 +171,9 @@ export default function LoginScreen({ onLogin, onCreateAccount }: Props) {
               type={showPw ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Enter your password"
-              style={{
-                width: "100%",
-                padding: "12px 44px 12px 16px",
-                borderRadius: 10,
-                background: "#2A2A2A",
-                border: "1px solid #333",
-                color: "white",
-                fontSize: 14,
-                outline: "none",
-              }}
+              style={{ ...inputStyle, paddingRight: 44 }}
               onFocus={handleFocus}
               onBlur={handleBlur}
             />
@@ -172,7 +197,33 @@ export default function LoginScreen({ onLogin, onCreateAccount }: Props) {
           </div>
         </div>
 
-        <div style={{ textAlign: "right", marginBottom: 24 }}>
+        {error && (
+          <div
+            data-ocid="login.error_state"
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 8,
+              padding: "10px 14px",
+              borderRadius: 8,
+              background: "rgba(239,68,68,0.12)",
+              border: "1px solid rgba(239,68,68,0.3)",
+              marginTop: 12,
+              marginBottom: 4,
+            }}
+          >
+            <AlertCircle
+              size={16}
+              color="#EF4444"
+              style={{ flexShrink: 0, marginTop: 1 }}
+            />
+            <span style={{ fontSize: 13, color: "#EF4444", lineHeight: 1.4 }}>
+              {error}
+            </span>
+          </div>
+        )}
+
+        <div style={{ textAlign: "right", margin: "12px 0 20px" }}>
           <button
             type="button"
             data-ocid="login.forgot_password.link"
@@ -191,22 +242,26 @@ export default function LoginScreen({ onLogin, onCreateAccount }: Props) {
         <button
           type="button"
           data-ocid="login.submit.button"
-          onClick={onLogin}
+          onClick={handleSubmit}
+          disabled={loading}
           style={{
             width: "100%",
             padding: "13px",
             borderRadius: 10,
-            background: "linear-gradient(135deg, #00D4AA, #00A884)",
+            background: loading
+              ? "#334"
+              : "linear-gradient(135deg, #00D4AA, #00A884)",
             border: "none",
-            color: "#0A1628",
+            color: loading ? "#718096" : "#0A1628",
             fontWeight: 700,
             fontSize: 15,
-            cursor: "pointer",
-            boxShadow: "0 4px 16px rgba(0,212,170,0.3)",
+            cursor: loading ? "not-allowed" : "pointer",
+            boxShadow: loading ? "none" : "0 4px 16px rgba(0,212,170,0.3)",
             marginBottom: 20,
+            transition: "all 0.2s",
           }}
         >
-          Sign In
+          {loading ? "Signing in…" : "Sign In"}
         </button>
 
         <div style={{ textAlign: "center", fontSize: 14, color: "#718096" }}>
@@ -227,6 +282,34 @@ export default function LoginScreen({ onLogin, onCreateAccount }: Props) {
             Create Account
           </button>
         </div>
+
+        <p
+          style={{
+            textAlign: "center",
+            fontSize: 12,
+            color: "#4A5568",
+            marginTop: 20,
+            marginBottom: 0,
+            lineHeight: 1.5,
+          }}
+        >
+          New to SupplyTrack AI?{" "}
+          <button
+            type="button"
+            onClick={onCreateAccount}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#718096",
+              cursor: "pointer",
+              fontSize: 12,
+              textDecoration: "underline",
+            }}
+          >
+            Register first
+          </button>{" "}
+          before signing in.
+        </p>
       </div>
     </div>
   );
